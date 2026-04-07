@@ -1,0 +1,116 @@
+// This is your Prisma schema file
+// Railway MySQL Database
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────
+// USERS — WhatsApp users interacting with bot
+// ─────────────────────────────────────────
+model User {
+  id           String   @id @default(cuid())
+  waNumber     String   @unique // WhatsApp number e.g. 923001234567
+  sessionState String   @default("IDLE") // IDLE, FORM_STEP_1..10, AWAITING_CONFIRM, ADMIN_MODE
+  activeDraftId String?
+  formsThisMonth Int    @default(0)
+  lastFormReset  DateTime @default(now())
+  isAdmin      Boolean  @default(false)
+  isBanned     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  drafts       Draft[]
+  posts        Post[]
+  leads        Lead[]   @relation("InterestedUser")
+  logs         Log[]
+}
+
+// ─────────────────────────────────────────
+// DRAFTS — Property form submissions
+// ─────────────────────────────────────────
+model Draft {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+
+  // Form Fields
+  propertyType  String?  // Flat, House, Shop, Portion
+  purpose       String?  // Buy, Sell, Rent, RentOut
+  city          String?
+  area          String?
+  street        String?
+  price         String?  // Optional
+  size          String?  // Optional
+  bedrooms      String?  // Optional
+  bathrooms     String?  // Optional
+  description   String?  @db.Text // Optional
+  mediaLinks    String?  @db.Text // Comma-separated external links
+  contactNumber String?  // Hidden from group post
+
+  // Status
+  status        String   @default("DRAFT") // DRAFT, PENDING, APPROVED, REJECTED
+  adminNote     String?  // Rejection reason or admin note
+  currentStep   Int      @default(1)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  post          Post?
+}
+
+// ─────────────────────────────────────────
+// POSTS — Approved & live property listings
+// ─────────────────────────────────────────
+model Post {
+  id            String   @id @default(cuid())
+  draftId       String   @unique
+  draft         Draft    @relation(fields: [draftId], references: [id])
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+
+  // Posted Info
+  groupMessageId String? // WhatsApp message ID in group (for editing/deleting)
+  postedAt      DateTime @default(now())
+  isActive      Boolean  @default(true)
+  viewCount     Int      @default(0)
+
+  leads         Lead[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────
+// LEADS — Interest clicks
+// ─────────────────────────────────────────
+model Lead {
+  id               String   @id @default(cuid())
+  postId           String
+  post             Post     @relation(fields: [postId], references: [id])
+  interestedUserId String
+  interestedUser   User     @relation("InterestedUser", fields: [interestedUserId], references: [id])
+
+  contactSent      Boolean  @default(false)
+  ownerNotified    Boolean  @default(false)
+  adminNotified    Boolean  @default(false)
+
+  createdAt        DateTime @default(now())
+}
+
+// ─────────────────────────────────────────
+// LOGS — All significant actions
+// ─────────────────────────────────────────
+model Log {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String   // FORM_START, FORM_COMPLETE, POST_APPROVED, POST_DELETED, LEAD_CREATED, etc.
+  details   String?  @db.Text
+  createdAt DateTime @default(now())
+}

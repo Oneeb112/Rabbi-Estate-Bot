@@ -1,0 +1,6 @@
+auth_info_baileys/
+baileys_store.json
+node_modules/
+dist/
+.env
+*.log
