@@ -17,8 +17,8 @@ export const config = {
   // Environment
   isDev: process.env.NODE_ENV !== 'production',
 
-  // Session auth folder
-  authFolder: './auth_info_baileys',
+  // Session auth folder (Persistent Volume support)
+  authFolder: process.env.AUTH_FOLDER || './auth_info_baileys',
 
   // Pairing Code Support
   usePairingCode: process.env.USE_PAIRING_CODE === 'true',
