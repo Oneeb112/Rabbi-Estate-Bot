@@ -105,7 +105,16 @@ async function startBot() {
           logger.info('🔄 Reconnecting in 5 seconds...');
           setTimeout(startBot, 5000);
         } else {
-          logger.error('❌ Logged out. Delete auth folder and restart.');
+          logger.error('❌ Logged out! Cleaning up session folder and restarting...');
+          try {
+            if (fs.existsSync(config.authFolder)) {
+              fs.rmSync(config.authFolder, { recursive: true, force: true });
+              logger.info('🧹 Auth folder cleared successfully.');
+            }
+          } catch (err) {
+            logger.error({ err }, 'Failed to clear auth folder');
+          }
+          // Exit and let Railway restart it fresh
           process.exit(1);
         }
       }
