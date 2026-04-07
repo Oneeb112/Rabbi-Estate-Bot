@@ -1,11 +1,11 @@
 import { WASocket, proto } from '@whiskeysockets/baileys';
-import { getOrCreateUser, updateUserSession, checkMonthlyFormLimit } from '../db/queries';
-import { config } from '../config';
-import { handleFormStep } from './form';
-import { handleAdminCommand } from './moderation';
-import { handlePostCommand } from './posts';
-import { handleLeadCommand } from './leads';
-import { logger } from '../utils/logger';
+import { getOrCreateUser, updateUserSession, checkMonthlyFormLimit } from '../db/queries.js';
+import { config } from '../config/index.js';
+import { handleFormStep } from './form.js';
+import { handleAdminCommand } from './moderation.js';
+import { handlePostCommand } from './posts.js';
+import { handleLeadCommand } from './leads.js';
+import { logger } from '../utils/logger.js';
 
 // Rate limiting: track message counts in memory
 const rateLimitMap = new Map<string, { count: number; reset: number }>();

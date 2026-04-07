@@ -3,16 +3,15 @@ import { User } from '@prisma/client';
 import {
   createDraft, updateDraftField, updateDraftStep,
   getDraftById, submitDraftForReview, updateUserSession,
-  incrementFormCount, getUserByNumber
-} from '../db/queries';
-import { FORM_STEPS, config } from '../config';
+  incrementFormCount, getUserByNumber, createLog
+} from '../db/queries.js';
+import { FORM_STEPS, config } from '../config/index.js';
 import {
   validatePropertyType, validatePurpose, validatePhoneNumber,
   isSkip, isCancel, isConfirm, isEdit
-} from '../utils/validator';
-import { formatDraftPreview, formatAdminModerationMsg } from '../utils/formatter';
-import { createLog } from '../db/queries';
-import { logger } from '../utils/logger';
+} from '../utils/validator.js';
+import { formatDraftPreview, formatAdminModerationMsg } from '../utils/formatter.js';
+import { logger } from '../utils/logger.js';
 
 // Helper: send with delay (human-like)
 async function sendWithDelay(sock: WASocket, jid: string, text: string, delayMs = 1000) {

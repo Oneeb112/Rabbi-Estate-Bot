@@ -1,5 +1,5 @@
-import prisma from './client';
-import { logger } from '../utils/logger';
+import prisma from './client.js';
+import { logger } from '../utils/logger.js';
 
 // ─────────────────────────────────────────
 // USER QUERIES

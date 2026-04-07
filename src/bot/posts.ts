@@ -1,11 +1,10 @@
 import { WASocket } from '@whiskeysockets/baileys';
 import {
   getUserActivePosts, getPostById, deactivatePost,
-  getUserByNumber
-} from '../db/queries';
-import { formatUserPostList } from '../utils/formatter';
-import { extractPostId } from '../utils/validator';
-import { createLog } from '../db/queries';
+  getUserByNumber, createLog
+} from '../db/queries.js';
+import { formatUserPostList } from '../utils/formatter.js';
+import { extractPostId } from '../utils/validator.js';
 
 // ─────────────────────────────────────────
 // POST CRUD COMMANDS

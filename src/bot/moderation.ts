@@ -2,13 +2,13 @@ import { WASocket } from '@whiskeysockets/baileys';
 import { User } from '@prisma/client';
 import {
   getPendingDrafts, getDraftById, createPost,
-  deactivatePost, getPostById, updateDraftField, getUserByNumber
-} from '../db/queries';
-import prisma from '../db/client';
-import { config } from '../config';
-import { formatGroupPost } from '../utils/formatter';
-import { createLog } from '../db/queries';
-import { logger } from '../utils/logger';
+  deactivatePost, getPostById, updateDraftField, getUserByNumber,
+  createLog
+} from '../db/queries.js';
+import prisma from '../db/client.js';
+import { config } from '../config/index.js';
+import { formatGroupPost } from '../utils/formatter.js';
+import { logger } from '../utils/logger.js';
 
 // ─────────────────────────────────────────
 // ADMIN COMMAND HANDLER

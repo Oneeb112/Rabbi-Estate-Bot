@@ -2,15 +2,15 @@
   "name": "rabbi-estate-bot",
   "version": "1.0.0",
   "description": "WhatsApp Real Estate Bot for Pakistan/Karachi Market",
-  "main": "dist/index.js",
+  "type": "module",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma db push",
     "prisma:studio": "prisma studio",
-    "setup": "npm install && npx prisma generate && npx prisma migrate deploy"
+    "setup": "npm install && npx prisma generate && npx prisma db push"
   },
   "dependencies": {
     "@prisma/client": "^5.11.0",
@@ -26,6 +26,7 @@
     "@types/node": "^20.12.7",
     "@types/node-cron": "^3.0.11",
     "prisma": "^5.11.0",
+    "tsx": "^4.7.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.4.5"
   },

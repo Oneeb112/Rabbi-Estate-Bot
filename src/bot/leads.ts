@@ -1,13 +1,12 @@
 import { WASocket, proto } from '@whiskeysockets/baileys';
 import {
   getOrCreateUser, createLead, markLeadContacted,
-  getPostById, getTodayLeads, getUserByNumber
-} from '../db/queries';
-import prisma from '../db/client';
-import { config } from '../config';
-import { extractPostId } from '../utils/validator';
-import { createLog } from '../db/queries';
-import { logger } from '../utils/logger';
+  getTodayLeads, getUserByNumber, createLog
+} from '../db/queries.js';
+import prisma from '../db/client.js';
+import { config } from '../config/index.js';
+import { extractPostId } from '../utils/validator.js';
+import { logger } from '../utils/logger.js';
 
 // ─────────────────────────────────────────
 // LEAD / INTEREST HANDLER

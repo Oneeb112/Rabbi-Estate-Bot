@@ -1,5 +1,4 @@
-import * as dotenv from 'dotenv';
-dotenv.config();
+import 'dotenv/config';
 
 import makeWASocket, {
   DisconnectReason,
@@ -8,13 +7,13 @@ import makeWASocket, {
   proto,
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
-import * as fs from 'fs';
-import * as cron from 'node-cron';
-import { handleIncomingMessage } from './bot/handler';
-import { sendDailyLeadReport } from './bot/leads';
-import { config } from './config';
-import { logger } from './utils/logger';
-import prisma from './db/client';
+import fs from 'fs';
+import cron from 'node-cron';
+import { handleIncomingMessage } from './bot/handler.js';
+import { sendDailyLeadReport } from './bot/leads.js';
+import { config } from './config/index.js';
+import { logger } from './utils/logger.js';
+import prisma from './db/client.js';
 
 // Ensure auth folder exists
 if (!fs.existsSync(config.authFolder)) {

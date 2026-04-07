@@ -1,6 +1,6 @@
 import pino from 'pino';
 
-export const logger = pino({
+export const logger = (pino as any)({
   level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
   transport:
     process.env.NODE_ENV !== 'production'
