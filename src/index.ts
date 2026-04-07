@@ -9,6 +9,7 @@ import makeWASocket, {
 import { Boom } from '@hapi/boom';
 import fs from 'fs';
 import cron from 'node-cron';
+import qrcode from 'qrcode-terminal';
 import { handleIncomingMessage } from './bot/handler.js';
 import { sendDailyLeadReport } from './bot/leads.js';
 import { config } from './config/index.js';
@@ -71,6 +72,7 @@ async function startBot() {
 
       if (qr) {
         logger.info('📱 Scan QR code with WhatsApp to connect the bot');
+        qrcode.generate(qr, { small: true });
       }
 
       if (connection === 'close') {
