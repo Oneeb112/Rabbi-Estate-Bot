@@ -20,6 +20,10 @@ export const config = {
   // Session auth folder
   authFolder: './auth_info_baileys',
 
+  // Pairing Code Support
+  usePairingCode: process.env.USE_PAIRING_CODE === 'true',
+  phoneNumber: process.env.PHONE_NUMBER || '',
+
   // Lead report hour (PKT)
   leadReportHour: parseInt(process.env.LEAD_REPORT_HOUR || '9'),
 };

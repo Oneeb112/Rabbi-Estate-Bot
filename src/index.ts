@@ -45,15 +45,36 @@ async function startBot() {
   const sock = makeWASocket({
     version,
     logger: logger.child({ module: 'baileys' }) as any,
-    printQRInTerminal: true,
+    printQRInTerminal: false,
     auth: state,
-    // Human-like message timing
+    connectTimeoutMs: 60000,
+    defaultQueryTimeoutMs: 0,
+    keepAliveIntervalMs: 10000,
     generateHighQualityLinkPreview: false,
     getMessage: async (key) => {
       const cacheKey = `${key.remoteJid}:${key.id}`;
       return msgCache.get(cacheKey)?.message || undefined;
     },
   });
+
+  // ─── Pairing Code Logic ───
+  if (config.usePairingCode && !state.creds.registered) {
+    if (!config.phoneNumber) {
+      logger.error('❌ PHONE_NUMBER is required for pairing code! Examples: 923001234567');
+    } else {
+      setTimeout(async () => {
+        try {
+          const code = await sock.requestPairingCode(config.phoneNumber);
+          logger.info(`🔑 PAIRING CODE: ${code}`);
+          console.log('\n\n━━━━━━━━━━━━━━━━━━━━━━━');
+          console.log(`🚀 YOUR PAIRING CODE: ${code}`);
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━\n\n');
+        } catch (err) {
+          logger.error({ err }, 'Failed to request pairing code');
+        }
+      }, 5000); 
+    }
+  }
 
   // Cache incoming messages for context
   sock.ev.on('messages.upsert', ({ messages }) => {
