@@ -33,9 +33,9 @@ export function formatDraftPreview(draft: Draft): string {
   if (draft.description) msg += `📝 *Features:* ${draft.description}\n`;
   if (draft.mediaLinks) msg += `🖼️ *Media:* ${draft.mediaLinks}\n`;
   msg += `━━━━━━━━━━━━━━━━━━━━━\n`;
-  msg += `📞 Contact: _[Hidden — shared privately]_\n`;
-  msg += `\n✅ *Is this correct?*\n`;
-  msg += `Reply:\n*confirm* — Submit for admin review\n*edit* — Make changes\n*cancel* — Discard this post`;
+  msg += `📞 *Contact:* _[Hidden — shared privately]_\n\n`;
+  msg += `✅ *Kya ye details sahi hain? (Is this correct?)*\n`;
+  msg += `Reply with number (1-3):\n\n1️⃣ *confirm* — Post submit karein\n2️⃣ *edit* — Kuch tabdeel karein\n3️⃣ *cancel* — Form band karein`;
 
   return msg;
 }

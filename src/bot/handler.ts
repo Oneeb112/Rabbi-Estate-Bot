@@ -30,12 +30,14 @@ function getWelcomeMessage(): string {
 🏠 _Karachi Real Estate — Buy | Sell | Rent_
 
 ━━━━━━━━━━━━━━━━━━━━━
-📌 *Aap kya karna chahte hain?*
+📌 *Aap kya karna chahte hain? (Select an option):*
 
-🏡 *post* — Naya property post banayein
-📋 *my posts* — Apne active posts dekhein
-ℹ️ *help* — Help aur commands
+1️⃣ *post* — Naya property post banayein
+2️⃣ *my posts* — Apne active posts dekhein
+3️⃣ *help* — Help aur mazeed commands
 ━━━━━━━━━━━━━━━━━━━━━
+
+_Reply with number (1-3) or type the command._
 
 _Kisi bhi group post pe interested hone ke liye:_
 *interested #POSTID* likhein
@@ -44,25 +46,25 @@ _Kisi bhi group post pe interested hone ke liye:_
 }
 
 function getHelpMessage(): string {
-  return `📖 *Rabbi Estate Bot — Help*
+  return `📖 *Rabbi Estate Bot — Help Guide*
 
 ━━━━━━━━━━━━━━━━━━━━━
 *🏡 POST MANAGEMENT*
-• *post* — Naya listing shuru karein
-• *my posts* — Apne posts dekhein
-• *delete #XXXXXX* — Post delete karein
+• *1* ya *post* — Naya listing shuru karein
+• *2* ya *my posts* — Apne active posts dekhein
+• *delete #XXXXXX* — Purana post delete karein
 • *view #XXXXXX* — Post ki details dekhein
 
 *👥 LEAD / INTEREST*
-• *interested #XXXXXX* — Kissi post mein interested hain
+• *interested #XXXXXX* — Kisi post mein dilchaspi zahir karein
 
 *🔄 FORM COMMANDS*
-• *skip* — Optional step skip karein
-• *cancel* — Form band karein
-• *back* — Pichle step pe jayein
+• *0* — (skip) Optional step ko chhorne ke liye
+• *3* — (cancel) Form khatam karne ke liye
+• *back* — Pichle step pe jane ke liye
 
 ━━━━━━━━━━━━━━━━━━━━━
-📞 Support ke liye admin se rabta karein.`;
+📞 Support ke liye admin se rabta (contact) karein.`;
 }
 
 // ─────────────────────────────────────────
@@ -124,12 +126,12 @@ export async function handleIncomingMessage(
     return;
   }
 
-  if (lower === 'help' || lower === 'madad') {
+  if ((lower === 'help' || lower === 'madad' || lower === '3') && user.sessionState === 'IDLE') {
     await sock.sendMessage(jid, { text: getHelpMessage() });
     return;
   }
 
-  if ((lower === 'post' || lower === 'naya post' || lower === 'new post' || lower === 'listing') && user.sessionState === 'IDLE') {
+  if ((lower === 'post' || lower === 'naya post' || lower === 'new post' || lower === 'listing' || lower === '1') && user.sessionState === 'IDLE') {
     // Check monthly limit
     const canPost = await checkMonthlyFormLimit(waNumber, config.maxFormsPerMonth);
     if (!canPost) {
@@ -143,7 +145,7 @@ export async function handleIncomingMessage(
     return;
   }
 
-  if (lower === 'my posts' || lower === 'mere posts' || lower === 'meri listings') {
+  if (lower === 'my posts' || lower === 'mere posts' || lower === 'meri listings' || lower === '2') {
     await handlePostCommand(sock, jid, waNumber, 'list', null);
     return;
   }

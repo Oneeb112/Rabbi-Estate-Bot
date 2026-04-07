@@ -93,12 +93,19 @@ export async function handleFormStep(
   // Save to DB
   if (value && activeDraftId) {
     if (currentStep === 3) {
-      // Location: split into city, area, street
+      // Location: If user uses commas, store parts. Otherwise, store exactly as typed.
       const parts = input.split(',').map((p: string) => p.trim());
       if (activeDraftId) {
-        await updateDraftField(activeDraftId, 'city', parts[0] || '');
-        await updateDraftField(activeDraftId, 'area', parts[1] || '');
-        await updateDraftField(activeDraftId, 'street', parts[2] || '');
+        if (parts.length > 1) {
+          await updateDraftField(activeDraftId, 'city', parts[0] || '');
+          await updateDraftField(activeDraftId, 'area', parts[1] || '');
+          await updateDraftField(activeDraftId, 'street', parts[2] || '');
+        } else {
+          // No commas? Store the whole thing in area to keep it 100% raw
+          await updateDraftField(activeDraftId, 'city', '');
+          await updateDraftField(activeDraftId, 'area', input);
+          await updateDraftField(activeDraftId, 'street', '');
+        }
       }
     } else {
       await updateDraftField(activeDraftId, stepDef.field, value);
@@ -172,17 +179,19 @@ async function handleConfirm(sock: WASocket, jid: string, waNumber: string, draf
 // Validate step input
 // ─────────────────────────────────────────
 async function validateStep(step: number, input: string): Promise<string | null> {
+  const clean = input.trim();
   switch (step) {
-    case 1: return validatePropertyType(input);
-    case 2: return validatePurpose(input);
-    case 3: return input.length >= 3 ? input : null; // Location: min 3 chars
-    case 4: return input.trim() || null; // Price: any text
-    case 5: return input.trim() || null; // Size
-    case 6: return /^\d+$/.test(input.trim()) ? input.trim() : (input.trim() || null); // Bedrooms
-    case 7: return /^\d+$/.test(input.trim()) ? input.trim() : (input.trim() || null); // Bathrooms
-    case 8: return input.length >= 2 ? input : null; // Description
-    case 9: return input.trim() || null; // Media links — any URL accepted
-    case 10: return validatePhoneNumber(input) ? input.trim() : null; // Contact
-    default: return input.trim() || null;
+    case 1: return validatePropertyType(clean);
+    case 2: return validatePurpose(clean);
+    case 3: return clean.length >= 3 ? clean : null; // Location
+    case 4: return clean; // Price: No normalization, use exactly what user types
+    case 5: return clean; // Size
+    case 6: // Bedrooms: only numbers
+    case 7: // Bathrooms: only numbers
+      return /^\d+$/.test(clean) ? clean : null;
+    case 8: return clean.length >= 2 ? clean : null; // Description
+    case 9: return clean; // Media
+    case 10: return validatePhoneNumber(clean) ? clean : null; // Contact
+    default: return clean;
   }
 }

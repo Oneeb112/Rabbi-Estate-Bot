@@ -33,15 +33,18 @@ export function isSkip(input: string): boolean {
 }
 
 export function isCancel(input: string): boolean {
-  return ['cancel', 'بند', 'band', 'stop', 'quit', 'exit'].includes(input.toLowerCase().trim());
+  const text = input.toLowerCase().trim();
+  return ['cancel', 'بند', 'band', 'stop', 'quit', 'exit', '3'].includes(text);
 }
 
 export function isConfirm(input: string): boolean {
-  return ['confirm', 'yes', 'ok', 'haan', 'ha', 'ہاں', 'send', 'submit', 'done'].includes(input.toLowerCase().trim());
+  const text = input.toLowerCase().trim();
+  return ['confirm', 'yes', 'ok', 'haan', 'ha', 'ہاں', 'send', 'submit', 'done', '1'].includes(text);
 }
 
 export function isEdit(input: string): boolean {
-  return ['edit', 'tabdeel', 'change', 'wapas', 'back', 'تبدیل'].includes(input.toLowerCase().trim());
+  const text = input.toLowerCase().trim();
+  return ['edit', 'tabdeel', 'change', 'wapas', 'back', 'تبدیل', '2'].includes(text);
 }
 
 export function isUrl(input: string): boolean {
