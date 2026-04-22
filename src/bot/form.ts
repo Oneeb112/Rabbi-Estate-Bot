@@ -15,10 +15,34 @@ import { formatDraftPreview, formatAdminModerationMsg } from '../utils/formatter
 import { logger } from '../utils/logger.js';
 
 // Helper: send with delay (human-like)
-async function sendWithDelay(sock: WASocket, jid: string, text: string, delayMs = 1000) {
+async function sendWithDelay(sock: WASocket, jid: string, text: string, delayMs = 1000, options?: string[]) {
   await new Promise(r => setTimeout(r, delayMs + Math.random() * 1000));
-  await sock.sendMessage(jid, { text });
+  
+  if (options && options.length > 0) {
+    // Send as List Message for interactivity
+    const sections = [
+      {
+        title: "Chunaein (Select)",
+        rows: options.map((opt, i) => ({
+          title: opt,
+          rowId: (i + 1).toString(),
+          description: `Option ${i + 1}`
+        }))
+      }
+    ];
+
+    await sock.sendMessage(jid, {
+      text: text,
+      footer: "Rabbi Estate Bot",
+      buttonText: "Click here to Select",
+      sections
+    } as any);
+  } else {
+    await sock.sendMessage(jid, { text });
+  }
 }
+
+
 
 // ─────────────────────────────────────────
 // MAIN FORM STEP HANDLER
@@ -46,7 +70,8 @@ export async function handleFormStep(
     if (input === 'START') {
       const draft = await createDraft(user.id);
       await updateUserSession(waNumber, 'FORM_STEP_1', draft.id);
-      await sendWithDelay(sock, jid, `✅ *Naya Property Listing Shuru!*\n\n_Aap kisi bhi waqt *cancel* likh ke form band kar sakte hain._\n_Optional steps ke liye *0* likh ke skip karein._\n\n` + FORM_STEPS[0].question.en);
+      const firstStep = FORM_STEPS[0];
+      await sendWithDelay(sock, jid, `✅ *Naya Property Listing Shuru!*\n\n_Aap kisi bhi waqt *cancel* likh ke form band kar sakte hain._\n_Optional steps ke liye *0* likh ke skip karein._\n\n` + firstStep.question.en, 1000, (firstStep as any).options);
       return;
     }
 
@@ -160,7 +185,7 @@ async function goToNextStep(
     await updateDraftStep(draftId, nextStep);
     await updateUserSession(waNumber, `FORM_STEP_${nextStep}`);
     const nextStepDef = FORM_STEPS[nextStep - 1];
-    await sendWithDelay(sock, jid, nextStepDef.question.en, 800);
+    await sendWithDelay(sock, jid, nextStepDef.question.en, 800, (nextStepDef as any).options);
   } catch (error) {
     logger.error({ error, draftId }, 'Error in goToNextStep');
   }

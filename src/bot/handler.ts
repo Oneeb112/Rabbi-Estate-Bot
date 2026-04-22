@@ -128,9 +128,26 @@ export async function handleIncomingMessage(
 
   // ─── GLOBAL COMMANDS ───
   if (['hi', 'hello', 'start', 'salam', 'helo', 'السلام', 'assalam'].some(w => lower.includes(w)) && user.sessionState === 'IDLE') {
-    await sock.sendMessage(jid, { text: getWelcomeMessage() });
+    const sections = [
+      {
+        title: "Main Menu",
+        rows: [
+          { title: "Naya Post (New Post)", rowId: "1", description: "Property listing shuru karein" },
+          { title: "Mere Posts (My Posts)", rowId: "2", description: "Apne active listings dekhein" },
+          { title: "Help (Madad)", rowId: "3", description: "Bot use karne ka tareeqa" },
+        ]
+      }
+    ];
+
+    await sock.sendMessage(jid, {
+      text: getWelcomeMessage(),
+      buttonText: "Menu Chunaein",
+      footer: "Rabbi Estate Bot",
+      sections
+    } as any);
     return;
   }
+
 
   if ((lower === 'help' || lower === 'madad' || lower === '3') && user.sessionState === 'IDLE') {
     await sock.sendMessage(jid, { text: getHelpMessage() });
@@ -177,10 +194,15 @@ export async function handleIncomingMessage(
 // EXTRACT TEXT FROM MESSAGE
 // ─────────────────────────────────────────
 function extractText(message: proto.IWebMessageInfo): string | null {
+  const msg = message.message;
   return (
-    message.message?.conversation ||
-    message.message?.extendedTextMessage?.text ||
-    message.message?.imageMessage?.caption ||
+    msg?.conversation ||
+    msg?.extendedTextMessage?.text ||
+    msg?.buttonsResponseMessage?.selectedButtonId ||
+    msg?.listResponseMessage?.singleSelectReply?.selectedRowId ||
+    msg?.templateButtonReplyMessage?.selectedId ||
+    msg?.imageMessage?.caption ||
     null
   );
 }
+
