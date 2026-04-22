@@ -118,6 +118,12 @@ export async function handleIncomingMessage(
     if (adminHandled) return;
   }
 
+  // ─── FORM IN PROGRESS (High Priority) ───
+  if (user.sessionState.startsWith('FORM_STEP') || user.sessionState === 'AWAITING_CONFIRM') {
+    await handleFormStep(sock, jid, waNumber, user, text, user.activeDraftId);
+    return;
+  }
+
   const lower = text.toLowerCase();
 
   // ─── GLOBAL COMMANDS ───
@@ -160,11 +166,6 @@ export async function handleIncomingMessage(
     return;
   }
 
-  // ─── FORM IN PROGRESS ───
-  if (user.sessionState.startsWith('FORM_STEP') || user.sessionState === 'AWAITING_CONFIRM') {
-    await handleFormStep(sock, jid, waNumber, user, text, user.activeDraftId);
-    return;
-  }
 
   // ─── DEFAULT: Show welcome if idle ───
   if (user.sessionState === 'IDLE') {
