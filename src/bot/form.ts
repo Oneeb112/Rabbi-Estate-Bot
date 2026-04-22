@@ -8,6 +8,7 @@ import {
 import { FORM_STEPS, config } from '../config/index.js';
 import {
   validatePropertyType, validatePurpose, validatePhoneNumber,
+  validateNumber, validatePrice, validateArea,
   isSkip, isCancel, isConfirm, isEdit
 } from '../utils/validator.js';
 import { formatDraftPreview, formatAdminModerationMsg } from '../utils/formatter.js';
@@ -30,89 +31,105 @@ export async function handleFormStep(
   input: string,
   activeDraftId: string | null
 ) {
-  // ─── CANCEL ───
-  if (isCancel(input)) {
-    await updateUserSession(waNumber, 'IDLE', undefined);
-    await sendWithDelay(sock, jid, `❌ *Form cancel kar diya gaya.*\n\nKisi bhi waqt *post* likh ke naya form shuru karein.`);
-    return;
-  }
 
-  // ─── START FORM ───
-  if (input === 'START') {
-    const draft = await createDraft(user.id);
-    await updateUserSession(waNumber, 'FORM_STEP_1', draft.id);
-    await sendWithDelay(sock, jid, `✅ *Naya Property Listing Shuru!*\n\n_Aap kisi bhi waqt *cancel* likh ke form band kar sakte hain._\n_Optional steps ke liye *skip* likhein._\n\n` + FORM_STEPS[0].question.en);
-    return;
-  }
+  try {
+    const cleanInput = input.trim();
 
-  // ─── AWAITING CONFIRM ───
-  if (user.sessionState === 'AWAITING_CONFIRM') {
-    if (isConfirm(input)) {
-      await handleConfirm(sock, jid, waNumber, activeDraftId!);
-    } else if (isEdit(input)) {
-      // Go back to step 1
-      await updateDraftStep(activeDraftId!, 1);
-      await updateUserSession(waNumber, 'FORM_STEP_1');
-      await sendWithDelay(sock, jid, `✏️ *Edit Mode — Step 1 se dobara shuru karein:*\n\n` + FORM_STEPS[0].question.en, 500);
-    } else {
-      await sendWithDelay(sock, jid, `⚠️ *confirm*, *edit*, ya *cancel* likhein.`, 500);
-    }
-    return;
-  }
-
-  // ─── FORM STEP ───
-  const stepMatch = user.sessionState.match(/FORM_STEP_(\d+)/);
-  if (!stepMatch) return;
-
-  const currentStep = parseInt(stepMatch[1]);
-  const stepDef = FORM_STEPS[currentStep - 1];
-  if (!stepDef) return;
-
-  // Validate input
-  let value: string | null = null;
-
-  if (isSkip(input) && stepDef.skipable) {
-    // Skip optional step
-    await goToNextStep(sock, jid, waNumber, activeDraftId!, currentStep);
-    return;
-  }
-
-  if (!isSkip(input)) {
-    value = await validateStep(currentStep, input);
-    if (value === null && !stepDef.skipable) {
-      await sendWithDelay(sock, jid, `⚠️ *Galat jawab.* Please sahi jawab dein ya *cancel* likhein.\n\n` + stepDef.question.en, 500);
+    // ─── CANCEL (Only if not expecting numeric input that might conflict) ───
+    if (isCancel(cleanInput)) {
+      await updateUserSession(waNumber, 'IDLE', undefined);
+      await sendWithDelay(sock, jid, `❌ *Form cancel kar diya gaya.*\n\nKisi bhi waqt *post* likh ke naya form shuru karein.`);
       return;
     }
+
+    // ─── START FORM ───
+    if (input === 'START') {
+      const draft = await createDraft(user.id);
+      await updateUserSession(waNumber, 'FORM_STEP_1', draft.id);
+      await sendWithDelay(sock, jid, `✅ *Naya Property Listing Shuru!*\n\n_Aap kisi bhi waqt *cancel* likh ke form band kar sakte hain._\n_Optional steps ke liye *0* likh ke skip karein._\n\n` + FORM_STEPS[0].question.en);
+      return;
+    }
+
+    // ─── AWAITING CONFIRM ───
+    if (user.sessionState === 'AWAITING_CONFIRM') {
+      if (isConfirm(cleanInput)) {
+        await handleConfirm(sock, jid, waNumber, activeDraftId!);
+      } else if (isEdit(cleanInput)) {
+        // Go back to step 1
+        await updateDraftStep(activeDraftId!, 1);
+        await updateUserSession(waNumber, 'FORM_STEP_1');
+        await sendWithDelay(sock, jid, `✏️ *Edit Mode — Step 1 se dobara shuru karein:*\n\n` + FORM_STEPS[0].question.en, 500);
+      } else {
+        await sendWithDelay(sock, jid, `⚠️ *confirm*, *edit*, ya *cancel* likhein.`, 500);
+      }
+      return;
+    }
+
+    // ─── FORM STEP ───
+    const stepMatch = user.sessionState.match(/FORM_STEP_(\d+)/);
+    if (!stepMatch) return;
+
+    const currentStep = parseInt(stepMatch[1]);
+    const stepDef = FORM_STEPS[currentStep - 1];
+    if (!stepDef) return;
+
+    // Check for Skip (0)
+    if (isSkip(cleanInput) && stepDef.skipable) {
+      await sendWithDelay(sock, jid, `⏩ *Skipped.* Aglay step par ja rahe hain...`, 300);
+      await goToNextStep(sock, jid, waNumber, activeDraftId!, currentStep);
+      return;
+    }
+
+    // Validate input
+    const value = await validateStep(stepDef, cleanInput);
+
     if (value === null) {
-      // Invalid but skipable - ask again
-      await sendWithDelay(sock, jid, `⚠️ *Sahi jawab dein ya *skip* likhein.*\n\n` + stepDef.question.en, 500);
+      // Friendly error messages based on validation type
+      let errorMsg = `⚠️ *Galat jawab.* Please sahi jawab dein.`;
+      
+      if (stepDef.validationType === 'number') {
+        errorMsg = `⚠️ *Sirf numbers likhein.* Example: 3`;
+      } else if (stepDef.validationType === 'price') {
+        errorMsg = `⚠️ *Price sahi format mein likhein.* Example: 1.5 crore, 75 lakh, ya 1500000`;
+      } else if (stepDef.validationType === 'area') {
+        errorMsg = `⚠️ *Size sahi format mein likhein.* Example: 120 yards ya 5 marla`;
+      } else if (stepDef.validationType === 'phone') {
+        errorMsg = `⚠️ *Sahi phone number likhein.* Example: 03001234567`;
+      }
+
+      if (stepDef.skipable) {
+        errorMsg += `\n\n_(Aap *0* likh kar is step ko skip bhi kar sakte hain)_`;
+      }
+
+      await sendWithDelay(sock, jid, errorMsg + `\n\n` + stepDef.question.en, 500);
       return;
     }
-  }
 
-  // Save to DB
-  if (value && activeDraftId) {
-    if (currentStep === 3) {
-      // Location: If user uses commas, store parts. Otherwise, store exactly as typed.
-      const parts = input.split(',').map((p: string) => p.trim());
-      if (activeDraftId) {
+    // Save to DB
+    if (activeDraftId) {
+      if (currentStep === 3) {
+        // Location processing
+        const parts = cleanInput.split(',').map((p: string) => p.trim());
         if (parts.length > 1) {
           await updateDraftField(activeDraftId, 'city', parts[0] || '');
           await updateDraftField(activeDraftId, 'area', parts[1] || '');
           await updateDraftField(activeDraftId, 'street', parts[2] || '');
         } else {
-          // No commas? Store the whole thing in area to keep it 100% raw
           await updateDraftField(activeDraftId, 'city', '');
-          await updateDraftField(activeDraftId, 'area', input);
+          await updateDraftField(activeDraftId, 'area', cleanInput);
           await updateDraftField(activeDraftId, 'street', '');
         }
+      } else {
+        await updateDraftField(activeDraftId, stepDef.field, value);
       }
-    } else {
-      await updateDraftField(activeDraftId, stepDef.field, value);
     }
-  }
 
-  await goToNextStep(sock, jid, waNumber, activeDraftId!, currentStep);
+    await goToNextStep(sock, jid, waNumber, activeDraftId!, currentStep);
+
+  } catch (error) {
+    logger.error({ error, waNumber, activeDraftId }, 'Crash in handleFormStep');
+    await sendWithDelay(sock, jid, `⚠️ *Maazrat!* System mein kuch takniki masla hua hai. Dobara koshish karein ya *cancel* likh ke shuru se shuru karein.`);
+  }
 }
 
 // ─────────────────────────────────────────
@@ -125,73 +142,92 @@ async function goToNextStep(
   draftId: string,
   currentStep: number
 ) {
-  const nextStep = currentStep + 1;
+  try {
+    const nextStep = currentStep + 1;
 
-  if (nextStep > FORM_STEPS.length) {
-    // All steps done — show preview
-    await updateUserSession(waNumber, 'AWAITING_CONFIRM');
-    const draft = await getDraftById(draftId);
-    if (!draft) return;
+    if (nextStep > FORM_STEPS.length) {
+      // All steps done — show preview
+      await updateUserSession(waNumber, 'AWAITING_CONFIRM');
+      const draft = await getDraftById(draftId);
+      if (!draft) return;
 
-    const preview = formatDraftPreview(draft);
-    await sendWithDelay(sock, jid, `✅ *Form Complete!*\n\n*Aap ka draft preview:*\n\n${preview}`, 1000);
-    return;
+      const preview = formatDraftPreview(draft);
+      await sendWithDelay(sock, jid, `✅ *Form Complete!*\n\n*Aap ka draft preview:*\n\n${preview}\n\n*1*️⃣ Confirm (Submit karein)\n*2*️⃣ Edit (Wapas jayein)\n*cancel* likhein khatam karne ke liye.`, 1000);
+      return;
+    }
+
+    // Go to next step
+    await updateDraftStep(draftId, nextStep);
+    await updateUserSession(waNumber, `FORM_STEP_${nextStep}`);
+    const nextStepDef = FORM_STEPS[nextStep - 1];
+    await sendWithDelay(sock, jid, nextStepDef.question.en, 800);
+  } catch (error) {
+    logger.error({ error, draftId }, 'Error in goToNextStep');
   }
-
-  // Go to next step
-  await updateDraftStep(draftId, nextStep);
-  await updateUserSession(waNumber, `FORM_STEP_${nextStep}`);
-  const nextStepDef = FORM_STEPS[nextStep - 1];
-  await sendWithDelay(sock, jid, nextStepDef.question.en, 800);
 }
 
 // ─────────────────────────────────────────
 // Handle confirm — submit to admin
 // ─────────────────────────────────────────
 async function handleConfirm(sock: WASocket, jid: string, waNumber: string, draftId: string) {
-  const draft = await getDraftById(draftId);
-  if (!draft) return;
+  try {
+    const draft = await getDraftById(draftId);
+    if (!draft) return;
 
-  // Submit for review
-  await submitDraftForReview(draftId);
-  await incrementFormCount(waNumber);
-  await updateUserSession(waNumber, 'IDLE', undefined);
+    // Submit for review
+    await submitDraftForReview(draftId);
+    await incrementFormCount(waNumber);
+    await updateUserSession(waNumber, 'IDLE', undefined);
 
-  // Notify user
-  await sendWithDelay(sock, jid,
-    `🎉 *Post submit ho gaya!*\n\n✅ Admin review ke baad aap ka post WhatsApp group mein post ho jayega.\n📲 Aap ko approval pe notification milega.\n\n_Rabbi Estate Bot — Shukriya!_`,
-    800
-  );
+    // Notify user
+    await sendWithDelay(sock, jid,
+      `🎉 *Post submit ho gaya!*\n\n✅ Admin review ke baad aap ka post WhatsApp group mein post ho jayega.\n📲 Aap ko approval pe notification milega.\n\n_Rabbi Estate Bot — Shukriya!_`,
+      800
+    );
 
-  // Notify admin
-  const adminJid = config.adminNumber;
-  const adminMsg = formatAdminModerationMsg(draft);
-  await sock.sendMessage(adminJid, { text: adminMsg });
+    // Notify admin
+    const adminJid = config.adminNumber;
+    const adminMsg = formatAdminModerationMsg(draft);
+    await sock.sendMessage(adminJid, { text: adminMsg });
 
-  // Log
-  const user = await getUserByNumber(waNumber);
-  if (user) await createLog('FORM_SUBMITTED', user.id, `Draft ID: ${draftId}`);
+    // Log
+    const user = await getUserByNumber(waNumber);
+    if (user) await createLog('FORM_SUBMITTED', user.id, `Draft ID: ${draftId}`);
 
-  logger.info({ waNumber, draftId }, 'Form submitted for review');
+    logger.info({ waNumber, draftId }, 'Form submitted for review');
+  } catch (error) {
+    logger.error({ error, draftId }, 'Error in handleConfirm');
+  }
 }
 
 // ─────────────────────────────────────────
 // Validate step input
 // ─────────────────────────────────────────
-async function validateStep(step: number, input: string): Promise<string | null> {
+async function validateStep(stepDef: any, input: string): Promise<string | null> {
   const clean = input.trim();
-  switch (step) {
-    case 1: return validatePropertyType(clean);
-    case 2: return validatePurpose(clean);
-    case 3: return clean.length >= 3 ? clean : null; // Location
-    case 4: return clean; // Price: No normalization, use exactly what user types
-    case 5: return clean; // Size
-    case 6: // Bedrooms: only numbers
-    case 7: // Bathrooms: only numbers
-      return /^\d+$/.test(clean) ? clean : null;
-    case 8: return clean.length >= 2 ? clean : null; // Description
-    case 9: return clean; // Media
-    case 10: return validatePhoneNumber(clean) ? clean : null; // Contact
-    default: return clean;
+  if (!clean) return null;
+
+  try {
+    switch (stepDef.validationType) {
+      case 'propertyType':
+        return validatePropertyType(clean);
+      case 'purpose':
+        return validatePurpose(clean);
+      case 'number':
+        return validateNumber(clean);
+      case 'price':
+        return validatePrice(clean);
+      case 'area':
+        return validateArea(clean);
+      case 'phone':
+        return validatePhoneNumber(clean) ? clean : null;
+      case 'text':
+      default:
+        return clean.length >= 2 ? clean : null;
+    }
+  } catch (error) {
+    logger.error({ error, input, type: stepDef.validationType }, 'Validation logic crash');
+    return null;
   }
 }
+
