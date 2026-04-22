@@ -120,9 +120,10 @@ export async function handleIncomingMessage(
 
   // ─── FORM IN PROGRESS (High Priority) ───
   if (user.sessionState.startsWith('FORM_STEP') || user.sessionState === 'AWAITING_CONFIRM') {
-    await handleFormStep(sock, jid, waNumber, user, text, user.activeDraftId);
+    await handleFormStep(sock, jid, waNumber, user, text, user.activeDraftId, message);
     return;
   }
+
 
   const lower = text.toLowerCase();
 
@@ -164,7 +165,7 @@ export async function handleIncomingMessage(
       return;
     }
     // Start form
-    await handleFormStep(sock, jid, waNumber, user, 'START', null);
+    await handleFormStep(sock, jid, waNumber, user, 'START', null, message);
     return;
   }
 

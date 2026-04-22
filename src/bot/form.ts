@@ -1,5 +1,7 @@
-import { WASocket } from '@whiskeysockets/baileys';
+import { WASocket, downloadMediaMessage, proto } from '@whiskeysockets/baileys';
 import { User } from '@prisma/client';
+import fs from 'fs';
+import path from 'path';
 import {
   createDraft, updateDraftField, updateDraftStep,
   getDraftById, submitDraftForReview, updateUserSession,
@@ -13,6 +15,12 @@ import {
 } from '../utils/validator.js';
 import { formatDraftPreview, formatAdminModerationMsg } from '../utils/formatter.js';
 import { logger } from '../utils/logger.js';
+
+// Ensure uploads directory exists
+const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
 
 // Helper: send with delay (human-like)
 async function sendWithDelay(sock: WASocket, jid: string, text: string, delayMs = 1000, options?: string[]) {
@@ -42,10 +50,35 @@ async function sendWithDelay(sock: WASocket, jid: string, text: string, delayMs 
   }
 }
 
+// Helper: save media from message
+async function saveMedia(sock: WASocket, message: proto.IWebMessageInfo): Promise<string | null> {
+  try {
+    const buffer = await downloadMediaMessage(
+      message,
+      'buffer',
+      {},
+      { 
+        logger: logger as any,
+        reuploadRequest: (sock as any).updateMediaMessage
+      }
+    );
 
+    const isImage = !!message.message?.imageMessage;
+    const extension = isImage ? 'jpg' : 'mp4';
+    const fileName = `media_${Date.now()}_${Math.floor(Math.random() * 1000)}.${extension}`;
+    const filePath = path.join(UPLOADS_DIR, fileName);
+
+    await fs.promises.writeFile(filePath, buffer);
+    logger.info({ fileName }, 'Media saved successfully');
+    return fileName;
+  } catch (err) {
+    logger.error({ err }, 'Error downloading/saving media');
+    return null;
+  }
+}
 
 // ─────────────────────────────────────────
-// MAIN FORM STEP HANDLER
+// MAIN FORM HANDLER
 // ─────────────────────────────────────────
 export async function handleFormStep(
   sock: WASocket,
@@ -53,13 +86,13 @@ export async function handleFormStep(
   waNumber: string,
   user: User,
   input: string,
-  activeDraftId: string | null
+  activeDraftId: string | null,
+  message?: proto.IWebMessageInfo
 ) {
-
   try {
     const cleanInput = input.trim();
 
-    // ─── CANCEL (Only if not expecting numeric input that might conflict) ───
+    // ─── CANCEL ───
     if (isCancel(cleanInput)) {
       await updateUserSession(waNumber, 'IDLE', undefined);
       await sendWithDelay(sock, jid, `❌ *Form cancel kar diya gaya.*\n\nKisi bhi waqt *post* likh ke naya form shuru karein.`);
@@ -83,7 +116,7 @@ export async function handleFormStep(
         // Go back to step 1
         await updateDraftStep(activeDraftId!, 1);
         await updateUserSession(waNumber, 'FORM_STEP_1');
-        await sendWithDelay(sock, jid, `✏️ *Edit Mode — Step 1 se dobara shuru karein:*\n\n` + FORM_STEPS[0].question.en, 500);
+        await sendWithDelay(sock, jid, `✍️ *Edit Mode — Step 1 se dobara shuru karein:*\n\n` + FORM_STEPS[0].question.en, 500);
       } else {
         await sendWithDelay(sock, jid, `⚠️ *confirm*, *edit*, ya *cancel* likhein.`, 500);
       }
@@ -103,6 +136,46 @@ export async function handleFormStep(
       await sendWithDelay(sock, jid, `⏩ *Skipped.* Aglay step par ja rahe hain...`, 300);
       await goToNextStep(sock, jid, waNumber, activeDraftId!, currentStep);
       return;
+    }
+
+    // ─── STEP 9: MEDIA SPECIAL HANDLING ───
+    if (currentStep === 9) {
+      if (cleanInput.toLowerCase() === 'done') {
+        await sendWithDelay(sock, jid, `✅ *Media saved.* Moving to next step.`, 500);
+        await goToNextStep(sock, jid, waNumber, activeDraftId!, currentStep);
+        return;
+      }
+
+      // Check for media
+      const mediaMsg = message?.message;
+      const isImage = !!mediaMsg?.imageMessage;
+      const isVideo = !!mediaMsg?.videoMessage;
+
+      if (isImage || isVideo) {
+        try {
+          const mediaPath = await saveMedia(sock, message!);
+          if (mediaPath && activeDraftId) {
+            // Append to mediaLinks
+            const draft = await getDraftById(activeDraftId);
+            const currentLinks = draft?.mediaLinks ? draft.mediaLinks.split(',') : [];
+            currentLinks.push(mediaPath);
+            await updateDraftField(activeDraftId, 'mediaLinks', currentLinks.join(','));
+
+            await sendWithDelay(sock, jid, `✅ *Received successfully.*\n\nSend more files or type *DONE* to continue.`, 500);
+            return;
+          }
+        } catch (error) {
+          logger.error({ error }, 'Media upload failed');
+          await sendWithDelay(sock, jid, `❌ *Upload failed.* Please resend the file or type 0 to skip.`, 500);
+          return;
+        }
+      }
+
+      // If text input that isn't DONE or 0
+      if (!isImage && !isVideo && cleanInput !== '0') {
+        await sendWithDelay(sock, jid, `⚠️ *Please send photos/videos* or type *DONE* if you are finished.\n\nType *0* to skip this step.`, 500);
+        return;
+      }
     }
 
     // Validate input
@@ -255,4 +328,3 @@ async function validateStep(stepDef: any, input: string): Promise<string | null>
     return null;
   }
 }
-

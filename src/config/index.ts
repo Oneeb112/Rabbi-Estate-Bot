@@ -125,14 +125,15 @@ export const FORM_STEPS = [
   {
     step: 9,
     field: 'mediaLinks',
-    validationType: 'text',
+    validationType: 'media',
     required: false,
     question: {
-      en: '🖼️ *Step 9/10 — Photos / Videos*\n\nPhotos ya videos ka link share karein (Google Drive/Dropbox):\n\n_Example: https://drive.google.com/share-link_\n\nType the link or reply *0* to skip',
-      ur: '🖼️ *Step 9/10 — Photos / Videos*\n\nPhotos ya videos ka link share karein (Google Drive/Dropbox):\n\n_Example: https://drive.google.com/share-link_\n\nType the link or reply *0* to skip',
+      en: '🖼️ *Step 9/10 — Photos / Videos*\n\nPlease send property photos or videos directly here on WhatsApp.\n\n✅ *You can:*\n• Upload from gallery\n• Record live video\n• Forward from another chat\n• Send multiple files\n\n_Type *DONE* when finished, or reply *0* to skip._',
+      ur: '🖼️ *Step 9/10 — Photos / Videos*\n\nPlease send property photos or videos directly here on WhatsApp.\n\n✅ *You can:*\n• Upload from gallery\n• Record live video\n• Forward from another chat\n• Send multiple files\n\n_Type *DONE* when finished, or reply *0* to skip._',
     },
     skipable: true,
   },
+
   {
     step: 10,
     field: 'contactNumber',
