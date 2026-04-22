@@ -110,15 +110,18 @@ export async function handleFormStep(
 
     // ─── AWAITING CONFIRM ───
     if (user.sessionState === 'AWAITING_CONFIRM') {
-      if (isConfirm(cleanInput)) {
+      if (isConfirm(cleanInput) || cleanInput === '1') {
         await handleConfirm(sock, jid, waNumber, activeDraftId!);
-      } else if (isEdit(cleanInput)) {
+      } else if (isEdit(cleanInput) || cleanInput === '2') {
         // Go back to step 1
         await updateDraftStep(activeDraftId!, 1);
         await updateUserSession(waNumber, 'FORM_STEP_1');
         await sendWithDelay(sock, jid, `✍️ *Edit Mode — Step 1 se dobara shuru karein:*\n\n` + FORM_STEPS[0].question.en, 500);
+      } else if (isCancel(cleanInput) || cleanInput === '3') {
+        await updateUserSession(waNumber, 'IDLE', undefined);
+        await sendWithDelay(sock, jid, `❌ *Form cancel kar diya gaya.*\n\nKisi bhi waqt *post* likh ke naya form shuru karein.`);
       } else {
-        await sendWithDelay(sock, jid, `⚠️ *confirm*, *edit*, ya *cancel* likhein.`, 500);
+        await sendWithDelay(sock, jid, `⚠️ *1* (confirm), *2* (edit), ya *3* (cancel) likhein.`, 500);
       }
       return;
     }
